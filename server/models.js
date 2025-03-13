@@ -20,7 +20,7 @@ const Counter = mongoose.model('Counter', counterSchema);
 // Task Schema
 const taskSchema = new mongoose.Schema({
     projectId: { type: mongoose.Schema.Types.ObjectId, ref: 'Project', required: true },
-    taskId: { type: String, required: true, unique: true },
+    taskId: { type: String, required: true },
     ticketId: { type: Number }
 }, { timestamps: true });
 

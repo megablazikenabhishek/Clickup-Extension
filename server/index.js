@@ -3,9 +3,11 @@ require("dotenv").config()
 const express = require('express');
 const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
+const cors = require("cors")
 const { Project, Task } = require('./models');
 
 const app = express();
+app.use(cors());
 app.use(bodyParser.json());
 
 // Connect to MongoDB
@@ -48,9 +50,17 @@ app.post('/tasks', async (req, res) => {
         // Find or create the project
         let project = await Project.findOne({ projectId, workspaceId });
 
-        if (!project) {
+        console.log(project)
+
+        if (project === null) {
             project = new Project({ projectId, workspaceId, shortCode });
             await project.save();
+        }
+
+        const check = await Task.findOne({projectId: project._id, taskId});
+        if (check) {
+            await check.populate('projectId', 'shortCode');
+            return res.status(201).json(check);
         }
 
         // Create a new task
@@ -58,7 +68,7 @@ app.post('/tasks', async (req, res) => {
         await task.save();
         await task.populate('projectId', 'shortCode');
 
-        res.status(201).json({ message: "Task created successfully", task });
+        res.status(201).json(task);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }

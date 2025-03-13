@@ -1,5 +1,31 @@
 console.log("Hii")
 
+class FetchPipeline {
+    constructor() {
+        this.queue = Promise.resolve(); 
+    }
+
+    async addRequest(url, options) {
+        this.queue = this.queue.then(() => this.makeRequest(url, options));
+        return this.queue; 
+    }
+
+    async makeRequest(url, options) {
+        try {
+            console.log(`fetching url: ${url}`)
+            const response = await fetch(url, options);
+            const data = await response.json();
+            console.log("Success:", data);
+            return {success: true, data};
+        } catch (error) {
+            console.error("Error:", error);
+            return {success: false}
+        }
+    }
+}
+
+const baseUrl = "http://localhost:3000"
+const fetchPipeline = new FetchPipeline();
 let workspaceId = null;
 let projectData = [];
 const ticketMap = new Map();
@@ -92,6 +118,47 @@ function generateShortName(projectName) {
     return shortName;
 }
 
+const handleNewTasks = async (taskId) => {
+    try {
+        const url = new URL(window.location.href);
+        const projectId = url.searchParams.get("pr");
+
+        if (!projectId){
+            console.log("can't add here")
+            return
+        }
+
+        const project = projectData.find(proj => proj.projectId === projectId)
+
+        if (!project) {
+
+        }
+
+        const body = {
+            projectId,
+            workspaceId,
+            shortCode: project.shortCode,
+            taskId
+        }
+
+        const response = await fetchPipeline.addRequest(`${baseUrl}/tasks`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body)
+        })
+
+        const result = response.data
+        ticketMap.set(taskId, result.formattedTicketId);
+        console.log(JSON.stringify(taskId), result.formattedTicketId)
+        console.log(JSON.stringify(ticketMap), JSON.stringify(result))
+
+        return true;
+    } catch (error) {
+        console.log(error)
+        return false;
+    }
+}
+
 const handleTicketIdValue = (taskLists) => {
     taskLists.forEach((row, index) => {
         const taskId = row.getAttribute("data-id");
@@ -111,7 +178,12 @@ const handleTicketIdValue = (taskLists) => {
             return;
         }
         
-        const ticketId = "MVP-"+index;
+        if (!ticketMap.has(taskId)) {
+            handleNewTasks(taskId)
+            return;
+        }
+
+        const ticketId = ticketMap.get(taskId);
         
         ticketMap.set(taskId, ticketId);
         row.setAttribute("task-value", ticketId)
@@ -143,8 +215,24 @@ const handleTicketIdValue = (taskLists) => {
     })
 }
 
+async function getTasks(workspaceId) {
+    try {
+        const response = await fetchPipeline.addRequest(`${baseUrl}/tasks/workspace/${workspaceId}`);
+        if (!response.success){
+            throw new Error("something went wrong")
+        }
+        const dataRow = response.data
+        console.log(dataRow);
 
-const interval = setInterval(() => {
+        dataRow.forEach(task => {
+            ticketMap.set(task.taskId, task.formattedTicketId)
+        })
+    } catch (error) {
+        console.error('Error fetching tasks:', error);
+    }
+}
+
+const startObserver = () => {
     const taskHeaders = document.querySelectorAll("cu-task-list")
 
     taskHeaders.forEach(header => {
@@ -158,7 +246,7 @@ const interval = setInterval(() => {
 
         header.setAttribute("dropdown-select", "true");
 
-        const actualHeaderList = header.firstElementChild.children[1].firstElementChild.children[1];
+        const actualHeaderList = header.querySelector("cu-task-list-header").children[1].firstElementChild.children[1];
         actualHeaderList.innerHTML += ticketIdHeaderHTML
 
         const observer = new MutationObserver((mutations) => {
@@ -179,33 +267,54 @@ const interval = setInterval(() => {
 
         handleTicketIdValue(taskLists)
     })
-}, 500);
+}
 
+// to handle if new projects are created
+const updateProjectListDetails = (data) => {
+    const projectDataLocal = []
+    data.forEach(row => {
+        const projectId = extractProjectId(row.firstElementChild.children[1].href);
+        const projectName = row.firstElementChild.children[1].firstElementChild.firstElementChild.textContent.trim();
 
-const projectInfoInterval = setInterval(()=> {
+        if (projectId === null || projectName === null) {
+            alert("Cannot config the extension!!")
+        }
+
+        // check if the shortname is already present
+        const shortCode = generateShortName(projectName)
+        
+        projectDataLocal.push({projectId, projectName, shortCode});
+    })
+
+    projectData = [...projectDataLocal]
+
+    localStorage.setItem("projectData", JSON.stringify(projectData));
+}
+
+const startInterval = setInterval(()=> {
     const data = document.querySelectorAll("cu-project-row");
 
-    
     if (data.length !== 0) {
 
         workspaceId = extractWorkspaceIdFromURL(window.location.href)
 
-        data.forEach(row => {
-            const projectId = extractProjectId(row.firstElementChild.children[1].href);
-            const projectName = row.firstElementChild.children[1].firstElementChild.firstElementChild.textContent.trim();
+        updateProjectListDetails(data)
 
-            if (projectId === null || projectName === null) {
-                alert("Cannot config the extension!!")
-            }
-
-            const projectShortName = generateShortName(projectName)
-            
-            projectData.push({projectId, projectName, projectShortName});
-        })
+        getTasks(workspaceId)
 
         localStorage.setItem("workspaceId", workspaceId);
-        localStorage.setItem("projectData", JSON.stringify(projectData));
 
-        clearInterval(projectInfoInterval)
+        clearInterval(startInterval)
+
+        // interval to observer tasks
+        setInterval(() => {
+            startObserver()
+        }, 500);
+
+        // interval to observe projects
+        setInterval(()=> {
+            const data = document.querySelectorAll("cu-project-row");
+            updateProjectListDetails(data);
+        })
     }
 }, 500)
