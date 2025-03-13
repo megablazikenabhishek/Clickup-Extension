@@ -24,11 +24,12 @@ class FetchPipeline {
     }
 }
 
-const baseUrl = "http://localhost:3000"
+const baseUrl = "https://clickup-extension.vercel.app"
 const fetchPipeline = new FetchPipeline();
 let workspaceId = null;
 let projectData = [];
 const ticketMap = new Map();
+const loadingSet = new Set();
 
 const ticketIdHeaderHTML = `
     <cu-task-list-header-field mwlresizable="" cdkdrag="" class="cu-task-list-header-field cdk-drag cu-task-list-header__item __dcb_width_160px--important cu-task-list-header-field_list-view-v3 ng-star-inserted" data-field="id">
@@ -120,6 +121,9 @@ function generateShortName(projectName) {
 
 const handleNewTasks = async (taskId) => {
     try {
+        if(loadingSet.has(taskId))
+            return;
+
         const url = new URL(window.location.href);
         const projectId = url.searchParams.get("pr");
 
@@ -131,7 +135,7 @@ const handleNewTasks = async (taskId) => {
         const project = projectData.find(proj => proj.projectId === projectId)
 
         if (!project) {
-
+            console.log("This was not supposed to happen :(")
         }
 
         const body = {
@@ -141,11 +145,14 @@ const handleNewTasks = async (taskId) => {
             taskId
         }
 
+        loadingSet.add(taskId);
         const response = await fetchPipeline.addRequest(`${baseUrl}/tasks`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(body)
         })
+
+        loadingSet.delete(taskId)
 
         const result = response.data
         ticketMap.set(taskId, result.formattedTicketId);
@@ -155,6 +162,7 @@ const handleNewTasks = async (taskId) => {
         return true;
     } catch (error) {
         console.log(error)
+        loadingSet.delete(taskId)
         return false;
     }
 }
@@ -309,12 +317,12 @@ const startInterval = setInterval(()=> {
         // interval to observer tasks
         setInterval(() => {
             startObserver()
-        }, 500);
+        }, 1000);
 
         // interval to observe projects
         setInterval(()=> {
             const data = document.querySelectorAll("cu-project-row");
             updateProjectListDetails(data);
-        })
+        }, 1000)
     }
 }, 500)
