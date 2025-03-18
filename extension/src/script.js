@@ -288,13 +288,16 @@ const updateProjectListDetails = (data) => {
             alert("Cannot config the extension!!")
         }
 
+        
         // check if the shortname is already present
         const shortCode = generateShortName(projectName)
         
         projectDataLocal.push({projectId, projectName, shortCode});
     })
-
+    
     projectData = [...projectDataLocal]
+
+    chrome.runtime.sendMessage({ type: "PROJECT_DATA", data: JSON.stringify(projectData) });
 
     localStorage.setItem("projectData", JSON.stringify(projectData));
 }
@@ -305,6 +308,8 @@ const startInterval = setInterval(()=> {
     if (data.length !== 0) {
 
         workspaceId = extractWorkspaceIdFromURL(window.location.href)
+
+        chrome.runtime.sendMessage({type: "WORKSPACE_ID", data: workspaceId})
 
         updateProjectListDetails(data)
 
@@ -326,3 +331,10 @@ const startInterval = setInterval(()=> {
         }, 1000)
     }
 }, 500)
+
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (message.type === "REQ") {
+        chrome.runtime.sendMessage({type: "WORKSPACE_ID", data: workspaceId})
+        chrome.runtime.sendMessage({ type: "PROJECT_DATA", data: JSON.stringify(projectData) });
+    }
+})

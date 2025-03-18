@@ -74,6 +74,16 @@ app.post('/tasks', async (req, res) => {
     }
 });
 
+app.get("/shortCode/:workspaceId", async (req, res) => {
+    try {
+        const projects = await Project.find({ workspaceId: req.params.workspaceId });
+
+        res.status(200).json(projects)
+    } catch (error) {
+        res.status(500).json({ error: err.message });
+    }
+})
+
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
