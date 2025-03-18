@@ -74,7 +74,7 @@ app.post('/tasks', async (req, res) => {
     }
 });
 
-app.get("/shortCode/:workspaceId", async (req, res) => {
+app.get("/projects/:workspaceId", async (req, res) => {
     try {
         const projects = await Project.find({ workspaceId: req.params.workspaceId });
 
