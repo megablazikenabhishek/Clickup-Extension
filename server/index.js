@@ -33,7 +33,7 @@ app.get('/tasks/workspace/:workspaceId', async (req, res) => {
         const projectIds = projects.map(project => project._id);
         
         const tasks = await Task.find({ projectId: { $in: projectIds } }).populate('projectId', 'shortCode');
-        res.json(tasks);
+        res.json({tasks, projects});
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
