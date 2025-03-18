@@ -74,15 +74,29 @@ app.post('/tasks', async (req, res) => {
     }
 });
 
-app.get("/projects/:workspaceId", async (req, res) => {
-    try {
-        const projects = await Project.find({ workspaceId: req.params.workspaceId });
+app.put('/projects/updateShortCodes', async (req, res) => {
+    const updates = req.body;
 
-        res.status(200).json(projects)
-    } catch (error) {
-        res.status(500).json({ error: err.message });
+    if (!Array.isArray(updates) || updates.length === 0) {
+        return res.status(400).json({ error: 'Invalid input. Expected an array of updates.' });
     }
-})
+
+    try {
+        const bulkOps = updates.map(update => ({
+            updateOne: {
+                filter: { projectId: update.projectId },
+                update: { $set: { shortCode: update.shortCode } }
+            }
+        }));
+
+        const result = await Project.bulkWrite(bulkOps);
+
+        res.json({ message: 'ShortCodes updated successfully', result });
+    } catch (err) {
+        console.error('Error updating shortCodes:', err);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+});
 
 
 const PORT = process.env.PORT || 3000;
