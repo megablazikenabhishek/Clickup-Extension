@@ -1,5 +1,3 @@
-console.log("Hii")
-
 class FetchPipeline {
     constructor() {
         this.queue = Promise.resolve(); 
@@ -29,6 +27,7 @@ const fetchPipeline = new FetchPipeline();
 let workspaceId = null;
 let projectData = [];
 const ticketMap = new Map();
+const shortCodeMap = new Map();
 const loadingSet = new Set();
 
 const ticketIdHeaderHTML = `
@@ -107,7 +106,20 @@ function extractProjectId(url) {
     return match ? match[1] : null;
 }
 
-function generateShortName(projectName) {
+function safeSendData(data) {
+    try {
+        chrome.runtime.sendMessage(
+            {...data},
+            (response) => {
+                
+            }
+        );
+    } catch (err) {
+        
+    }
+}
+
+function getShortName(projectName) {
     const cleanedName = projectName.replace(/[^a-zA-Z]/g, '');
     
     let shortName = cleanedName.toUpperCase().slice(0, 3);
@@ -229,11 +241,15 @@ async function getTasks(workspaceId) {
         if (!response.success){
             throw new Error("something went wrong")
         }
-        const dataRow = response.data
-        console.log(dataRow);
+        const {tasks, projects} = response.data
+        console.log(tasks);
 
-        dataRow.forEach(task => {
+        tasks.forEach(task => {
             ticketMap.set(task.taskId, task.formattedTicketId)
+        })
+
+        projects.forEach(proj => {
+            shortCodeMap.set(proj.projectId, proj.shortCode);
         })
     } catch (error) {
         console.error('Error fetching tasks:', error);
@@ -288,16 +304,18 @@ const updateProjectListDetails = (data) => {
             alert("Cannot config the extension!!")
         }
 
-        
-        // check if the shortname is already present
-        const shortCode = generateShortName(projectName)
+        let shortCode = "";
+        if (shortCodeMap.has(projectId))
+            shortCode = shortCodeMap.get(projectId);
+        else
+            shortCode = getShortName(projectName)
         
         projectDataLocal.push({projectId, projectName, shortCode});
     })
     
     projectData = [...projectDataLocal]
 
-    chrome.runtime.sendMessage({ type: "PROJECT_DATA", data: JSON.stringify(projectData) });
+    safeSendData({ type: "DATA", data: JSON.stringify({workspaceId, projectData}) });
 
     localStorage.setItem("projectData", JSON.stringify(projectData));
 }
@@ -308,12 +326,10 @@ const startInterval = setInterval(()=> {
     if (data.length !== 0) {
 
         workspaceId = extractWorkspaceIdFromURL(window.location.href)
-
-        chrome.runtime.sendMessage({type: "WORKSPACE_ID", data: workspaceId})
+        
+        getTasks(workspaceId)
 
         updateProjectListDetails(data)
-
-        getTasks(workspaceId)
 
         localStorage.setItem("workspaceId", workspaceId);
 
@@ -331,10 +347,3 @@ const startInterval = setInterval(()=> {
         }, 1000)
     }
 }, 500)
-
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    if (message.type === "REQ") {
-        chrome.runtime.sendMessage({type: "WORKSPACE_ID", data: workspaceId})
-        chrome.runtime.sendMessage({ type: "PROJECT_DATA", data: JSON.stringify(projectData) });
-    }
-})

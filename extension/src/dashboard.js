@@ -1,22 +1,50 @@
 let workspaceId = "";
 let projectData = [];
+const baseUrl = "https://clickup-extension.vercel.app"
 
 const saveBtn = document.getElementById('saveBtn');
 if (saveBtn) {
-    saveBtn.addEventListener('click', function () {
-        const projectValue = document.getElementById('project').value;
-        console.log('Project saved:', projectValue);
+    saveBtn.addEventListener('click', async () => {
+        console.log("Saving shortcodes.......")
+
+        const inputs = document.querySelectorAll('input');
+
+        const dataList = []
+        for (let i = 0; i < inputs.length; i++) {
+            const projectId = inputs[i].id;
+            const shortCode = inputs[i].value;
+
+            dataList.push({projectId, shortCode})
+        }
+
+        console.log(dataList);
+
+        try {
+            await fetch(`${baseUrl}/projects/updateShortCodes`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(dataList)
+            })
+
+            chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+                if (tabs[0]?.id) {
+                    chrome.tabs.reload(tabs[0].id);
+                }
+            });;
+        } catch (error) {
+            console.error(error.message)
+        }
     });
 }
 
-document.addEventListener("DOMContentLoaded", () => {
-    chrome.runtime.sendMessage({ type: "REQ", data: "Send me data plssss!!" });
-})
-
 const renderProjectDetails = (projectId, projectName, shortCode) => {
     return `
-        <div class="label">${projectName}:</div>
-        <input type="text" id="${projectId}" value="${shortCode}">
+        <div>
+            <div class="label">${projectName}:</div>
+            <input type="text" id="${projectId}" value="${shortCode}">
+        </div>
     `
 }
 
@@ -32,20 +60,18 @@ const updateUI = () => {
 }
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    let workspaceIdLocal = "", projectDataLocal = "";
-    
-    console.log(message)
-
-    if (message.type === "WORKSPACE_ID") {
-        workspaceIdLocal = message.data
-    } else if (message.type === "PROJECT_DATA") {
-        projectDataLocal = JSON.parse(message.data)
+    let dataLocal = {}
+    if (message.type === "DATA") {
+        dataLocal = message.data
+    } else {
+        return;
     }
 
-    if (workspaceIdLocal !== workspaceId || JSON.stringify(projectDataLocal) !== JSON.stringify(projectData)) {
-        workspaceId = workspaceIdLocal;
-        projectData = projectDataLocal;
+    if (dataLocal !== JSON.stringify({workspaceId, projectData})) {
+        const data = JSON.parse(dataLocal);
 
+        workspaceId = data.workspaceId
+        projectData = data.projectData;
         updateUI();
     }
 })
