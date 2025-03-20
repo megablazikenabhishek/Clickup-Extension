@@ -326,20 +326,18 @@ const updateProjectListDetails = (data) => {
     localStorage.setItem("projectData", JSON.stringify(projectData));
 }
 
-const startInterval = setInterval(()=> {
+const startInterval = async ()=> {
     const data = document.querySelectorAll("cu-project-row");
 
     if (data.length !== 0) {
 
         workspaceId = extractWorkspaceIdFromURL(window.location.href)
         
-        getTasks(workspaceId)
+        await getTasks(workspaceId)
 
         updateProjectListDetails(data)
 
         localStorage.setItem("workspaceId", workspaceId);
-
-        clearInterval(startInterval)
 
         // interval to observer tasks
         setInterval(() => {
@@ -352,4 +350,6 @@ const startInterval = setInterval(()=> {
             updateProjectListDetails(data);
         }, 1000)
     }
-}, 500)
+
+    setTimeout(startInterval, 500)
+}
