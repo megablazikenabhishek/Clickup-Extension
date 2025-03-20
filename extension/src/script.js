@@ -316,7 +316,7 @@ const updateProjectListDetails = (data) => {
             shortCode = getShortName(projectName)
         }
         
-        projectDataLocal.push({projectId, projectName, shortCode});
+        projectDataLocal.push({projectId, projectName, shortCode, editable});
     })
     
     projectData = [...projectDataLocal]

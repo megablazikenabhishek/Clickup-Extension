@@ -57,9 +57,16 @@ const updateUI = () => {
     const container = document.querySelector(".projectList");
 
     container.innerHTML = ""
+    let disableBtn = true
     projectData.forEach(row => {
         container.innerHTML += renderProjectDetails(row.projectId, row.projectName, row.shortCode, row.editable);
+
+        if (row.editable) {
+            disableBtn = false;
+        }
     })
+
+    document.getElementById("saveBtn").disabled = disableBtn;
 }
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
