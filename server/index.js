@@ -82,12 +82,32 @@ app.put('/projects/updateShortCodes', async (req, res) => {
     }
 
     try {
-        const bulkOps = updates.map(update => ({
-            updateOne: {
-                filter: { projectId: update.projectId },
-                update: { $set: { shortCode: update.shortCode } }
+        const bulkOps = [];
+
+        for (const update of updates) {
+            const project = await Project.findOne({ projectId: update.projectId });
+
+            if (!project) continue; // Skip if project not found
+
+            // Only allow update if editable is true
+            if (project.editable) {
+                bulkOps.push({
+                    updateOne: {
+                        filter: { projectId: update.projectId },
+                        update: { 
+                            $set: { 
+                                shortCode: update.shortCode,
+                                editable: false // Mark as non-editable after update
+                            } 
+                        }
+                    }
+                });
             }
-        }));
+        }
+
+        if (bulkOps.length === 0) {
+            return res.status(400).json({ message: 'No editable projects found to update.' });
+        }
 
         const result = await Project.bulkWrite(bulkOps);
 
