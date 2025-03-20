@@ -11,6 +11,9 @@ if (saveBtn) {
 
         const dataList = []
         for (let i = 0; i < inputs.length; i++) {
+            if (inputs[i].disabled)
+                continue;
+
             const projectId = inputs[i].id;
             const shortCode = inputs[i].value;
 
@@ -39,11 +42,11 @@ if (saveBtn) {
     });
 }
 
-const renderProjectDetails = (projectId, projectName, shortCode) => {
+const renderProjectDetails = (projectId, projectName, shortCode, editable) => {
     return `
         <div>
             <div class="label">${projectName}:</div>
-            <input type="text" id="${projectId}" value="${shortCode}">
+            <input type="text" id="${projectId}" value="${shortCode}" ${editable ? '' : 'disabled'}>
         </div>
     `
 }
@@ -55,7 +58,7 @@ const updateUI = () => {
 
     container.innerHTML = ""
     projectData.forEach(row => {
-        container.innerHTML += renderProjectDetails(row.projectId, row.projectName, row.shortCode);
+        container.innerHTML += renderProjectDetails(row.projectId, row.projectName, row.shortCode, row.editable);
     })
 }
 

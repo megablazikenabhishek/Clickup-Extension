@@ -87,18 +87,31 @@ app.put('/projects/updateShortCodes', async (req, res) => {
         for (const update of updates) {
             const project = await Project.findOne({ projectId: update.projectId });
 
-            if (!project) continue; // Skip if project not found
-
-            // Only allow update if editable is true
-            if (project.editable) {
+            if (project) {
+                // Update only if editable is true
+                if (project.editable) {
+                    bulkOps.push({
+                        updateOne: {
+                            filter: { projectId: update.projectId },
+                            update: { 
+                                $set: { 
+                                    shortCode: update.shortCode,
+                                    editable: false 
+                                } 
+                            }
+                        }
+                    });
+                }
+            } else {
+                // Project doesn't exist, insert new one with editable: false
                 bulkOps.push({
-                    updateOne: {
-                        filter: { projectId: update.projectId },
-                        update: { 
-                            $set: { 
-                                shortCode: update.shortCode,
-                                editable: false // Mark as non-editable after update
-                            } 
+                    insertOne: {
+                        document: {
+                            projectId: update.projectId,
+                            projectName: update.projectName,
+                            workspaceId: update.workspaceId,
+                            shortCode: update.shortCode,
+                            editable: false
                         }
                     }
                 });
@@ -106,12 +119,12 @@ app.put('/projects/updateShortCodes', async (req, res) => {
         }
 
         if (bulkOps.length === 0) {
-            return res.status(400).json({ message: 'No editable projects found to update.' });
+            return res.status(400).json({ message: 'No projects were updated or inserted.' });
         }
 
         const result = await Project.bulkWrite(bulkOps);
 
-        res.json({ message: 'ShortCodes updated successfully', result });
+        res.json({ message: 'ShortCodes updated/inserted successfully', result });
     } catch (err) {
         console.error('Error updating shortCodes:', err);
         res.status(500).json({ error: 'Internal Server Error' });

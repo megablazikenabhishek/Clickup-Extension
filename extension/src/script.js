@@ -28,6 +28,7 @@ let workspaceId = null;
 let projectData = [];
 const ticketMap = new Map();
 const shortCodeMap = new Map();
+const editableMap = new Map();
 const loadingSet = new Set();
 
 const ticketIdHeaderHTML = `
@@ -250,6 +251,7 @@ async function getTasks(workspaceId) {
 
         projects.forEach(proj => {
             shortCodeMap.set(proj.projectId, proj.shortCode);
+            editableMap.set(proj.projectId, proj.editable);
         })
     } catch (error) {
         console.error('Error fetching tasks:', error);
@@ -305,10 +307,14 @@ const updateProjectListDetails = (data) => {
         }
 
         let shortCode = "";
-        if (shortCodeMap.has(projectId))
+        let editable = true;
+        if (shortCodeMap.has(projectId)) {
+            editable = editableMap.get(projectId);
             shortCode = shortCodeMap.get(projectId);
-        else
+        }
+        else {
             shortCode = getShortName(projectName)
+        }
         
         projectDataLocal.push({projectId, projectName, shortCode});
     })
