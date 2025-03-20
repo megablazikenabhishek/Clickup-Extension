@@ -12,9 +12,6 @@
       ],
       "js": [
         "./src/script.js"
-      ],
-      "css": [
-        "./src/style.css"
       ]
     }
   ],
