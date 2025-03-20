@@ -4,7 +4,8 @@ const mongoose = require('mongoose');
 const projectSchema = new mongoose.Schema({
     projectId: { type: String, required: true, unique: true },
     workspaceId: {type: String, required: true},
-    shortCode: { type: String, required: true }
+    shortCode: { type: String, required: true },
+    editable: { type: Boolean, default: true }
 }, { timestamps: true });
 
 const Project = mongoose.model('Project', projectSchema);
