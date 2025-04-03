@@ -11,7 +11,11 @@
         "https://app.clickup.com/*"
       ],
       "js": [
-        "./src/script.js"
+        "./src/script.js",
+        "./src/searchTask.js"
+      ],
+      "css": [
+        "./src/searchTask.css"
       ]
     }
   ],

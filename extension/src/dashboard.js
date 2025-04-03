@@ -17,7 +17,9 @@ if (saveBtn) {
             const projectId = inputs[i].id;
             const shortCode = inputs[i].value;
 
-            dataList.push({projectId, shortCode})
+            const proj = projectData.find(proj => proj.projectId === projectId);
+
+            dataList.push({projectId, shortCode, workspaceId, projectName: proj.projectName})
         }
 
         console.log(dataList);
